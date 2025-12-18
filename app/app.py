@@ -1,84 +1,140 @@
 import streamlit as st
+import pandas as pd
+from recommendation import generate_recommendation
+from report import generate_txt_report
 
 st.title("AI Dental Implant Material Selector")
 
-st.subheader("Enter Patient Information")
+# =========================
+# LOAD PARAMETERS FROM EXCEL
+# =========================
+EXCEL_PATH = "Literature_Survey.xlsx"
 
-# AGE INPUT
+def normalize_text(text):
+    if isinstance(text, str):
+        return (
+            text.replace("\n", " ")
+                .replace("\r", " ")
+                .replace("  ", " ")
+                .strip()
+        )
+    return text
+
+material_df = pd.read_excel(
+    EXCEL_PATH,
+    sheet_name="Material_Properties",
+    engine="openpyxl"
+)
+
+parameter_options = (
+    material_df["Parametre"]
+    .dropna()
+    .apply(normalize_text)
+    .unique()
+    .tolist()
+)
+
+# =========================
+# PATIENT INFORMATION
+# =========================
+st.subheader("Patient Information")
+
 age_input = st.text_input("Age", placeholder="Enter age (e.g., 35)")
-age = None
-if age_input.isdigit():
-    age = int(age_input)
-else:
-    if age_input != "":
-        st.warning("Please enter a valid numeric age.")
+age = int(age_input) if age_input.isdigit() else None
 
-# BONE TYPE
-bone_type = st.selectbox("Bone Type", ["Type I", "Type II", "Type III", "Type IV"])
+bone_type = st.selectbox(
+    "Bone Type",
+    ["I don't know", "Type I", "Type II", "Type III", "Type IV"]
+)
 
-# JAW REGION
-jaw_region = st.selectbox("Jaw Region", ["Mandible (Lower Jaw)", "Maxilla (Upper Jaw)"])
+jaw_region = st.selectbox(
+    "Jaw Region",
+    ["Mandible (Lower Jaw)", "Maxilla (Upper Jaw)"]
+)
 
-# BONE DENSITY
-bone_density = st.selectbox("Bone Density", ["Low", "Medium", "High"])
+bone_density = st.selectbox(
+    "Bone Density",
+    ["I don't know", "Low", "Medium", "High"]
+)
 
-# ALLERGY RISK
-allergy = st.selectbox("Metal Sensitivity / Allergy", ["None", "Mild", "High"])
+allergy = st.selectbox(
+    "Metal Sensitivity / Allergy",
+    ["I don't know", "None", "Mild", "High"]
+)
 
-# AESTHETIC PRIORITY
-aesthetic = st.selectbox("Aesthetic Priority", ["Low", "Medium", "High"])
+aesthetic = st.selectbox(
+    "Aesthetic Priority",
+    ["Low", "Medium", "High"]
+)
 
-# BUDGET
-budget = st.selectbox("Budget Level", ["Low", "Medium", "High"])
+budget = st.selectbox(
+    "Budget Level",
+    ["Low", "Medium", "High"]
+)
 
-# SMOKING
-smoking = st.selectbox("Smoking Status", ["Non-Smoker", "Smoker"])
+smoking = st.selectbox(
+    "Smoking Status",
+    ["Non-Smoker", "Smoker"]
+)
 
-# PROCESS BUTTON
+# =========================
+# SPECIAL CONDITIONS
+# =========================
+st.subheader("Special Clinical Conditions")
+
+diabetes = st.selectbox("Diabetes", ["No", "Yes"])
+bruxism = st.selectbox("Bruxism", ["No", "Yes"])
+
+# =========================
+# PARAMETER PRIORITIES
+# =========================
+st.subheader("Literature-Based Parameter Priorities")
+
+selected_parameters = st.multiselect(
+    "Select important material parameters",
+    parameter_options
+)
+
+# =========================
+# RUN SYSTEM
+# =========================
 if st.button("Get Recommendation"):
     if age is None:
-        st.error("Please enter a valid age before continuing.")
+        st.error("Please enter a valid age.")
+    elif len(selected_parameters) == 0:
+        st.error("Please select at least one parameter.")
     else:
-        result = f"""
-Recommended Material: Titanium
+        patient_info = {
+            "age": age,
+            "bone_type": bone_type,
+            "jaw_region": jaw_region,
+            "bone_density": bone_density,
+            "smoking": smoking,
+            "allergy": allergy,
+            "aesthetic": aesthetic,
+            "budget": budget,
+        }
 
-Why:
-- Strong osseointegration suitable for {jaw_region.lower()} and {bone_type}.
-- Performs well in {bone_density.lower()} bone density cases.
-- Biocompatible even with mild allergy risks.
-- Aesthetic priority: {aesthetic}.
-- Good choice for long-term durability.
-- Budget level: {budget}.
-- Smoking status considered: {smoking}.
-"""
+        special_conditions = {
+            "diabetes": diabetes,
+            "bruxism": bruxism,
+        }
 
-        st.subheader("Recommendation")
-        st.write(result)
+        ai_result = generate_recommendation(
+            patient_info,
+            special_conditions,
+            selected_parameters
+        )
 
-        # TXT REPORT CONTENT
-        report_text = f"""
-AI Dental Implant Recommendation Report
-----------------------------------------
+        st.subheader("AI Recommendation")
+        st.write(ai_result)
 
-Patient Information:
-- Age: {age}
-- Bone Type: {bone_type}
-- Jaw Region: {jaw_region}
-- Bone Density: {bone_density}
-- Metal Sensitivity: {allergy}
-- Aesthetic Priority: {aesthetic}
-- Budget Level: {budget}
-- Smoking Status: {smoking}
-
-Recommendation:
-Titanium implant is suggested.
-
-Reasoning:
-- Strong biocompatibility
-- High osseointegration rate
-- Long-term durability
-- Supported by clinical literature
-"""
+        report_text = generate_txt_report(
+            patient_info,
+            special_conditions,
+            selected_parameters,
+            ai_result
+        )
 
         st.download_button(
             label="⬇ Download Report (TXT)",
