@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from gemini import ask_gemini
 
 EXCEL_PATH = "Literature_Survey.xlsx"
