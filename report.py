@@ -11,9 +11,7 @@ AI Dental Implant Recommendation Report
 PATIENT INFORMATION
 -------------------
 Age: {patient_info['age']}
-Bone Type: {patient_info['bone_type']}
 Jaw Region: {patient_info['jaw_region']}
-Bone Density: {patient_info['bone_density']}
 Smoking Status: {patient_info['smoking']}
 Allergy Risk: {patient_info['allergy']}
 Aesthetic Priority: {patient_info['aesthetic']}
